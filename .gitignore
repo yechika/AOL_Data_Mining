@@ -1,0 +1,32 @@
+# GeoJSON files (large files)
+kecamatan.geojson
+kecamatan.geojson.zip
+
+# CSV data files (optional - uncomment if needed)
+# *.csv
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
