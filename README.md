@@ -8,7 +8,7 @@ Proyek prediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis,
 ### 1. main.ipynb
 **Deskripsi:** Ekstraksi data demografis dari file GeoJSON
 
-**Input:**
+**Input: https://www.kaggle.com/datasets/afiskandr/jumlah-penduduk-per-kecamatan-di-indonesia-2023**
 - `kecamatan.geojson` (7,287 rows, multiple columns)
 
 **Output:**
