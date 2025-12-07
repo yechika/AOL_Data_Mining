@@ -3,6 +3,7 @@
 ## Project Overview
 Proyek prediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis, klimat, dan demografis.
 
+
 ## Workflow & Execution Order
 
 ### 1. main.ipynb
@@ -24,25 +25,33 @@ Proyek prediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis,
 
 ---
 
-### 2. join_table.ipynb
-**Deskripsi:** Join data banjir dengan data kecamatan menggunakan normalisasi nama
+### 2. join_table.ipynb (Enhanced)
+**Deskripsi:** Join data banjir dengan data kecamatan menggunakan normalisasi nama dengan perbaikan matching
 
 **Input:**
-- `data_banjir_combine_final.csv` (18,048 rows)
-- `kecamatan_filtered.csv` (7,287 rows, 21 columns)
+- `data_banjir_combine_final.csv` (18,047 rows)
+- `kecamatan_filtered.csv` (7,285 rows, 21 columns)
 
 **Output:**
-- `data_banjir_joined.csv` (18,048 rows, 38 columns)
-- `data_banjir_joined_clean.csv` (18,048 rows, 38 columns dengan rename)
+- `data_banjir_joined.csv` (18,047 rows, 40 columns)
+- `data_banjir_joined_clean.csv` (18,047 rows, 40 columns dengan rename)
 
 **Proses:**
-- Normalisasi nama kecamatan (lowercase, remove special chars, unicode normalization)
-- Left join berdasarkan kecamatan_key
-- Deduplikasi data kecamatan
-- Rename kolom: NAME_2 → kabupaten_kota, NAME_3 → kecamatan
-- Remove kolom objectid
+1. **Fallback Strategy:** Gunakan NAME_3 jika NAME_3_clean kosong (mengatasi 7,067 empty keys)
+2. **Normalisasi:** lowercase, remove special chars, unicode normalization
+3. **Fuzzy Matching:** SequenceMatcher dengan threshold 85% untuk kecamatan yang hampir sama
+4. **Smart Deduplication:** Sort berdasarkan jumlah_penduduk (ambil yang terbesar untuk duplikat)
+5. **Left Join:** Berdasarkan kecamatan_key_enhanced
+6. **Cleanup:** Rename kolom (NAME_2 → kabupaten_kota, NAME_3 → kecamatan), remove objectid
 
-**Join Success Rate:** ~88.2% (15,914 matched, 2,134 unmatched)
+**Perbaikan Matching:**
+- Masalah ditemukan: 7,067 baris dengan NAME_3_clean kosong (39% dari total)
+- Solusi: Fallback ke NAME_3 + fuzzy matching
+- Duplikasi dihapus: 438 baris (7,285 → 6,847 rows kecamatan)
+
+**Join Success Rate:** ~99% (17,868 matched, 179 unmatched)
+- Peningkatan signifikan dari sebelumnya (~88.2%)
+- Kecamatan matching: 2,715/2,747 (98.8%)
 
 ---
 
@@ -50,10 +59,10 @@ Proyek prediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis,
 **Deskripsi:** Filter kolom relevan dan hapus data yang tidak ter-join
 
 **Input:**
-- `data_banjir_joined_clean.csv` (18,048 rows, 38 columns)
+- `data_banjir_joined_clean.csv` (18,047 rows, 40 columns)
 
 **Output:**
-- `data_banjir_filtered.csv` (15,914 rows, 16 columns)
+- `data_banjir_filtered.csv` (17,868 rows, 16 columns)
 
 **Kolom Output:**
 - kabupaten_kota, kecamatan
@@ -64,8 +73,8 @@ Proyek prediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis,
 - lat, long, jumlah_penduduk
 
 **Data Cleaning:**
-- Removed 2,134 rows tanpa jumlah_penduduk (unmatched data)
-- Retention rate: 88.2%
+- Removed 179 rows tanpa jumlah_penduduk (unmatched data)
+- Retention rate: ~99% (meningkat dari 88.2% sebelumnya)
 
 ---
 
@@ -73,7 +82,7 @@ Proyek prediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis,
 **Deskripsi:** Exploratory Data Analysis lengkap
 
 **Input:**
-- `data_banjir_filtered.csv` (15,914 rows, 16 columns)
+- `data_banjir_filtered.csv` (17,868 rows, 16 columns)
 
 **Output:**
 - Visualisasi dan analisis statistik (tidak menghasilkan file CSV)
@@ -94,11 +103,11 @@ Proyek prediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis,
 **Deskripsi:** Data preprocessing dan feature engineering berdasarkan temuan EDA
 
 **Input:**
-- `data_banjir_filtered.csv` (15,914 rows, 16 columns)
+- `data_banjir_filtered.csv` (17,868 rows, 16 columns)
 
 **Output:**
-- `data_banjir_processed.csv` (15,914 rows, 29 columns - scaled)
-- `data_banjir_engineered.csv` (15,914 rows, 22 columns - unscaled)
+- `data_banjir_processed.csv` (17,868 rows, 29 columns - scaled)
+- `data_banjir_engineered.csv` (17,868 rows, 22 columns - unscaled)
 
 **Proses:**
 1. **Outlier Handling:** IQR clipping method untuk semua fitur numerik
@@ -124,7 +133,7 @@ Proyek prediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis,
 **Deskripsi:** Model Decision Tree untuk prediksi banjir dengan class weighting
 
 **Input:**
-- `data_banjir_engineered.csv` (15,914 rows, 22 columns)
+- `data_banjir_engineered.csv` (17,868 rows, 22 columns)
 
 **Output:**
 - `decision_tree_rules.txt` (aturan keputusan dalam format teks)
@@ -181,7 +190,7 @@ Proyek prediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis,
 **Deskripsi:** Model Decision Tree dengan SMOTE untuk menangani class imbalance
 
 **Input:**
-- `data_banjir_engineered.csv` (15,914 rows, 22 columns)
+- `data_banjir_engineered.csv` (17,868 rows, 22 columns)
 
 **Output:**
 - `data_train_smote.csv` (16,216 rows - balanced training data)
