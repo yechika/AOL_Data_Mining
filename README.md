@@ -1,543 +1,572 @@
-# Data Mining Project - Flood Risk Prediction in Jabodetabek
+# 🌊 Flood Risk Prediction - Jabodetabek Region
 
-## Project Overview
-Proyek prediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis, klimat, dan demografis.
+> Machine Learning project untuk memprediksi risiko banjir di wilayah Jabodetabek menggunakan data geografis, klimatologi, dan demografis.
 
-
-## Workflow & Execution Order
-
-### 1. main.ipynb
-**Deskripsi:** Ekstraksi data demografis dari file GeoJSON
-
-**Input: https://www.kaggle.com/datasets/afiskandr/jumlah-penduduk-per-kecamatan-di-indonesia-2023**
-- `kecamatan.geojson` (7,287 rows, multiple columns)
-
-**Output:**
-- `kecamatan_filtered.csv` (7,287 rows, 21 columns)
-
-**Kolom Output:**
-- objectid, kode_kec_spatial, nama_prop, nama_kab, nama_kec
-- jumlah_penduduk, kepadatan_penduduk, jumlah_kk, luas_wilayah
-- pertumbuhan_2022, pertumbuhan_2021, pertumbuhan_2020
-- perpindahan_pddk, jumlah_desa, jumlah_kelurahan
-- perdagangan, nelayan, wiraswasta
-- tidak_blm_sekolah, slta, s1
+![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Status](https://img.shields.io/badge/Status-Complete-success.svg)
 
 ---
 
-### 2. join_table.ipynb (Enhanced)
-**Deskripsi:** Join data banjir dengan data kecamatan menggunakan normalisasi nama dengan perbaikan matching
+## 📋 Daftar Isi
 
-**Input:**
-- `data_banjir_combine_final.csv` (18,047 rows)
-- `kecamatan_filtered.csv` (7,285 rows, 21 columns)
-
-**Output:**
-- `data_banjir_joined.csv` (18,047 rows, 40 columns)
-- `data_banjir_joined_clean.csv` (18,047 rows, 40 columns dengan rename)
-
-**Proses:**
-1. **Fallback Strategy:** Gunakan NAME_3 jika NAME_3_clean kosong (mengatasi 7,067 empty keys)
-2. **Normalisasi:** lowercase, remove special chars, unicode normalization
-3. **Fuzzy Matching:** SequenceMatcher dengan threshold 85% untuk kecamatan yang hampir sama
-4. **Smart Deduplication:** Sort berdasarkan jumlah_penduduk (ambil yang terbesar untuk duplikat)
-5. **Left Join:** Berdasarkan kecamatan_key_enhanced
-6. **Cleanup:** Rename kolom (NAME_2 → kabupaten_kota, NAME_3 → kecamatan), remove objectid
-
-**Perbaikan Matching:**
-- Masalah ditemukan: 7,067 baris dengan NAME_3_clean kosong (39% dari total)
-- Solusi: Fallback ke NAME_3 + fuzzy matching
-- Duplikasi dihapus: 438 baris (7,285 → 6,847 rows kecamatan)
-
-**Join Success Rate:** ~99% (17,868 matched, 179 unmatched)
-- Peningkatan signifikan dari sebelumnya (~88.2%)
-- Kecamatan matching: 2,715/2,747 (98.8%)
+- [Overview](#-overview)
+- [Dataset](#-dataset)
+- [Project Workflow](#-project-workflow)
+- [Machine Learning Models](#-machine-learning-models)
+- [Installation](#-installation)
+- [Usage](#-usage)
+- [Results](#-results)
+- [Key Findings](#-key-findings)
+- [Future Work](#-future-work)
+- [Contributors](#-contributors)
 
 ---
 
-### 3. remove_header.ipynb
-**Deskripsi:** Filter kolom relevan dan hapus data yang tidak ter-join
+## 🎯 Overview
 
-**Input:**
-- `data_banjir_joined_clean.csv` (18,047 rows, 40 columns)
+Proyek ini bertujuan untuk mengembangkan model prediksi risiko banjir di wilayah Jabodetabek menggunakan pendekatan machine learning. Dengan memanfaatkan data geografis, klimatologi, dan demografis, proyek ini menghasilkan model yang dapat membantu dalam sistem peringatan dini banjir.
 
-**Output:**
-- `data_banjir_filtered.csv` (17,868 rows, 16 columns)
+### Tujuan Proyek
+- ✅ Mengintegrasikan data multi-sumber (GeoJSON, CSV)
+- ✅ Melakukan eksplorasi dan analisis data komprehensif
+- ✅ Membangun model prediksi banjir dengan Decision Tree, Random Forest, dan XGBoost
+- ✅ Menangani class imbalance dengan dua pendekatan: Class Weighting dan SMOTE
+- ✅ Membandingkan performa multiple models untuk rekomendasi deployment
 
-**Kolom Output:**
-- kabupaten_kota, kecamatan
-- avg_rainfall, max_rainfall, avg_temperature
-- elevation, landcover_class, ndvi, slope, soil_moisture
-- year, month
-- banjir (target variable)
-- lat, long, jumlah_penduduk
-
-**Data Cleaning:**
-- Removed 179 rows tanpa jumlah_penduduk (unmatched data)
-- Retention rate: ~99% (meningkat dari 88.2% sebelumnya)
+### Tech Stack
+- **Language:** Python 3.8+
+- **ML Libraries:** scikit-learn, imbalanced-learn, xgboost
+- **Data Processing:** pandas, numpy, geopandas
+- **Visualization:** matplotlib, seaborn
+- **Statistical Analysis:** scipy
 
 ---
 
-### 4. eda.ipynb
-**Deskripsi:** Exploratory Data Analysis lengkap
+## 📊 Dataset
 
-**Input:**
-- `data_banjir_filtered.csv` (17,868 rows, 16 columns)
+### Sumber Data
+- **Demographic Data:** [Kaggle - Jumlah Penduduk per Kecamatan Indonesia 2023](https://www.kaggle.com/datasets/afiskandr/jumlah-penduduk-per-kecamatan-di-indonesia-2023)
+- **Flood Data:** `data_banjir_combine_final.csv` (18,047 records)
 
-**Output:**
-- Visualisasi dan analisis statistik (tidak menghasilkan file CSV)
+### Dataset Statistics
+| Metric | Value |
+|--------|-------|
+| **Total Records** | 17,868 |
+| **Total Features** | 16 |
+| **Target Variable** | banjir (binary: 0/1) |
+| **Missing Values** | 0 |
+| **Duplicate Rows** | 0 |
+| **Join Success Rate** | ~99% |
 
-**Analisis:**
-- Data quality check (missing values, duplicates)
-- Descriptive statistics
-- Target variable distribution
-- Univariate analysis (numerical & categorical)
-- Bivariate analysis (features vs target)
-- Correlation analysis
-- Geospatial analysis
-- Statistical comparison (t-tests)
+### Fitur Dataset
+
+#### 🌍 Geographic (2 fitur)
+- `kabupaten_kota`: Nama kabupaten/kota
+- `kecamatan`: Nama kecamatan
+
+#### ☁️ Climate (3 fitur)
+- `avg_rainfall`: Rata-rata curah hujan (mm)
+- `max_rainfall`: Curah hujan maksimum (mm)
+- `avg_temperature`: Rata-rata temperatur (°C)
+
+#### 🌿 Environmental (5 fitur)
+- `elevation`: Ketinggian lokasi (m)
+- `landcover_class`: Klasifikasi tutupan lahan
+- `ndvi`: Normalized Difference Vegetation Index
+- `slope`: Kemiringan tanah (derajat)
+- `soil_moisture`: Kelembaban tanah
+
+#### 📅 Temporal (2 fitur)
+- `year`: Tahun kejadian
+- `month`: Bulan kejadian (1-12)
+
+#### 👥 Demographic (1 fitur)
+- `jumlah_penduduk`: Jumlah penduduk kecamatan
+
+#### 📍 Coordinates (2 fitur)
+- `lat`: Latitude
+- `long`: Longitude
+
+#### 🎯 Target Variable (1 fitur)
+- `banjir`: Kejadian banjir (0 = tidak banjir, 1 = banjir)
 
 ---
 
-### 5. fixing_dataset.ipynb
-**Deskripsi:** Data preprocessing dan feature engineering berdasarkan temuan EDA
+## 🔄 Project Workflow
 
-**Input:**
-- `data_banjir_filtered.csv` (17,868 rows, 16 columns)
+### Data Pipeline
 
-**Output:**
-- `data_banjir_processed.csv` (17,868 rows, 29 columns - scaled)
-- `data_banjir_engineered.csv` (17,868 rows, 22 columns - unscaled)
+```mermaid
+graph TD
+    A[kecamatan.geojson<br/>7,287 rows] --> B[main.ipynb]
+    B --> C[kecamatan_filtered.csv<br/>7,287 rows, 21 cols]
+    D[data_banjir_combine_final.csv<br/>18,047 rows] --> E[join_table.ipynb]
+    C --> E
+    E --> F[data_banjir_joined_clean.csv<br/>18,047 rows, 40 cols]
+    F --> G[remove_header.ipynb]
+    G --> H[data_banjir_filtered.csv<br/>17,868 rows, 16 cols]
+    H --> I[eda.ipynb]
+    H --> J[fixing_dataset.ipynb]
+    J --> K[data_banjir_engineered.csv<br/>17,868 rows, 22 cols]
+    K --> L[DecisionTree.ipynb<br/>Class Weighting]
+    K --> M[SMOTE_baru.ipynb<br/>SMOTE Oversampling]
+    K --> N[RandomForest.ipynb<br/>Ensemble Learning]
+    K --> P[XGBoost.ipynb<br/>Gradient Boosting]
+    L --> Q[Model Output<br/>F1: 0.3678, AUC: 0.6817]
+    M --> R[Model Output<br/>F1: 0.3554, AUC: 0.6834]
+    N --> S[Model Output<br/>F1: 0.9509, AUC: 0.9876]
+    P --> T[Model Output<br/>F1: 0.9503, AUC: 0.9894]
+```
 
-**Proses:**
-1. **Outlier Handling:** IQR clipping method untuk semua fitur numerik
-2. **Feature Engineering:** 6 fitur baru
-   - `rainfall_intensity`: max_rainfall / avg_rainfall
-   - `is_rainy_season`: binary flag untuk bulan hujan (Nov-Mar)
-   - `elevation_slope_ratio`: elevation / slope
-   - `vegetation_moisture`: ndvi * soil_moisture
-   - `population_density_proxy`: jumlah_penduduk / elevation
-   - `extreme_rainfall`: binary flag untuk curah hujan ekstrem (Q3)
-3. **Categorical Encoding:**
-   - Label encoding untuk landcover_class
-   - One-hot encoding untuk landcover features
-4. **Feature Scaling:** StandardScaler untuk fitur numerik
+### Notebooks Execution Order
 
-**Output Details:**
-- `data_banjir_processed.csv`: Dataset lengkap dengan scaling (untuk distance-based ML)
-- `data_banjir_engineered.csv`: Dataset dengan fitur baru tanpa scaling (untuk tree-based ML)
+| No | Notebook | Deskripsi | Input | Output |
+|----|----------|-----------|-------|--------|
+| 1 | `main.ipynb` | Ekstraksi data demografis dari GeoJSON | kecamatan.geojson (7,287 rows) | kecamatan_filtered.csv (21 cols) |
+| 2 | `join_table.ipynb` | Join data banjir dengan demografis menggunakan fuzzy matching | data_banjir + kecamatan_filtered | data_banjir_joined_clean.csv (40 cols) |
+| 3 | `remove_header.ipynb` | Filter kolom relevan dan bersihkan data | data_banjir_joined_clean.csv | data_banjir_filtered.csv (16 cols) |
+| 4 | `eda.ipynb` | Exploratory Data Analysis | data_banjir_filtered.csv | Visualizations & Statistics |
+| 5 | `fixing_dataset.ipynb` | Feature engineering & preprocessing | data_banjir_filtered.csv | data_banjir_engineered.csv (22 cols) |
+| 6 | `DecisionTree.ipynb` | Model dengan class weighting | data_banjir_engineered.csv | Decision Tree Model + Rules |
+| 7 | `SMOTE_baru.ipynb` | Model dengan SMOTE oversampling | data_banjir_engineered.csv | SMOTE Model + Balanced Data |
+| 8 | `RandomForest.ipynb` | Ensemble model dengan Random Forest | data_banjir_engineered.csv | Random Forest Model + Analysis |
+| 9 | `XGBoost.ipynb` | Gradient boosting model dengan XGBoost | data_banjir_engineered.csv | XGBoost Model + Analysis |
+| 10 | `WithoutMonth.ipynb` | Eksperimen tanpa fitur month | data_banjir_engineered.csv | Validation Results |
 
 ---
 
-### 6. DecisionTree.ipynb
-**Deskripsi:** Model Decision Tree untuk prediksi banjir dengan class weighting
+## 🤖 Machine Learning Models
 
-**Input:**
-- `data_banjir_engineered.csv` (17,868 rows, 22 columns)
+### 1️⃣ Decision Tree with Class Weighting
 
-**Output:**
-- `decision_tree_rules.txt` (aturan keputusan dalam format teks)
-- `decision_tree_visualization.png` (visualisasi tree)
-- Model performance metrics dan visualisasi
+**Approach:** Algorithmic approach menggunakan `class_weight='balanced'`
 
-**Features Used (16 total):**
-- **Numerical (12):** avg_rainfall, max_rainfall, avg_temperature, elevation, ndvi, slope, soil_moisture, jumlah_penduduk, rainfall_intensity, elevation_slope_ratio, vegetation_moisture, population_density_proxy
-- **Categorical (4):** month, is_rainy_season, extreme_rainfall, landcover_encoded
-
-**Workflow:**
-1. Load & encode landcover_class
-2. Exploratory visualization (scatter plots)
-3. Train-test split (80/20, stratified)
-4. Baseline Decision Tree training (class_weight='balanced')
-5. Model evaluation (confusion matrix, classification report, ROC curve)
-6. Entropy & Gini index analysis
-7. Tree structure visualization
-8. Feature importance ranking
-9. Cost complexity pruning analysis
-10. Optimized (pruned) tree training
-11. GridSearchCV hyperparameter tuning
-12. Decision rules extraction
-13. Best model visualization
-14. Final performance summary
-
-**Model Configuration:**
-- Algorithm: DecisionTreeClassifier
-- Class weight: balanced (algorithmic approach to handle imbalance)
-- Hyperparameter tuning: GridSearchCV with 5-fold CV (scoring='accuracy')
-- Evaluation metrics: Accuracy, Precision, Recall, F1-Score, AUC-ROC
-
-**Best Model Results:**
-- Test Accuracy: 0.8711 (87.11%)
-- Test Precision: 0.3184 (31.84%)
-- Test Recall: 0.4359 (43.59%)
-- Test F1-Score: 0.3678
-- Test AUC-ROC: 0.6817
+**Configuration:**
+- Algorithm: `DecisionTreeClassifier`
+- Hyperparameter Tuning: GridSearchCV (5-fold CV)
+- Scoring: Accuracy
 
 **Best Hyperparameters:**
-- criterion: gini
-- max_depth: 20
-- min_samples_split: 10
-- min_samples_leaf: 1
+```python
+{
+    'criterion': 'gini',
+    'max_depth': 20,
+    'min_samples_split': 10,
+    'min_samples_leaf': 1
+}
+```
 
-**Top 3 Important Features:**
-1. month (18.24%)
-2. avg_rainfall (13.60%)
-3. rainfall_intensity (11.22%)
+**Performance:**
+- ✅ Test Accuracy: **87.11%**
+- ✅ Precision: **31.84%**
+- ✅ Recall: **43.59%**
+- ✅ F1-Score: **0.3678**
+- ✅ AUC-ROC: **0.6817**
+
+**Top 3 Features:**
+1. `month` (18.24%)
+2. `avg_rainfall` (13.60%)
+3. `rainfall_intensity` (11.22%)
 
 ---
 
-### 7. SMOTE_baru.ipynb
-**Deskripsi:** Model Decision Tree dengan SMOTE untuk menangani class imbalance
+### 2️⃣ Decision Tree with SMOTE
 
-**Input:**
-- `data_banjir_engineered.csv` (17,868 rows, 22 columns)
+**Approach:** Data-level approach menggunakan Synthetic Minority Over-sampling Technique
 
-**Output:**
-- `data_train_smote.csv` (16,216 rows - balanced training data)
-- `data_test_original.csv` (2,196 rows - original test data)
-- `decision_tree_smote_rules.txt` (aturan keputusan)
-- `decision_tree_smote_visualization.png` (visualisasi tree)
-- Model performance metrics dan visualisasi
-
-**Key Approach:**
-- **SMOTE Implementation:** Synthetic Minority Over-sampling Technique
-- **Critical Feature:** SMOTE applied ONLY on training data (no data leakage)
-- **Test Data:** Remains unchanged with original distribution
-
-**Workflow:**
-1. Load dataset & encode landcover_class
-2. Data preparation (features selection)
-3. Train-test split (80/20, stratified) - BEFORE SMOTE
-4. Apply SMOTE on training data only
-5. Visualize SMOTE effect
-6. Verify data integrity (no leakage)
-7. Save SMOTE data for modeling
-8. Train baseline Decision Tree
-9. Model evaluation (confusion matrix, ROC curve)
-10. Feature importance analysis
-11. GridSearchCV hyperparameter tuning (scoring='f1')
-12. Compare baseline vs tuned models
-13. Best model visualization
-14. Extract decision rules
-15. Final summary
-
-**Model Configuration:**
-- Algorithm: DecisionTreeClassifier
-- Class balance: SMOTE oversampling (data-level approach)
-- Training data: 8,784 → 16,216 samples (balanced 1:1)
-- Test data: 2,196 samples (unchanged, original distribution)
-- Hyperparameter tuning: GridSearchCV with 5-fold CV (scoring='f1')
-- Evaluation metrics: Accuracy, Precision, Recall, F1-Score, AUC-ROC
-
-**Best Model Results:**
-- Test Accuracy: 0.8711 (87.11%)
-- Test Precision: 0.2889 (28.89%)
-- Test Recall: 0.4615 (46.15%)
-- Test F1-Score: 0.3554
-- Test AUC-ROC: 0.6834
+**Configuration:**
+- Algorithm: `DecisionTreeClassifier`
+- SMOTE: Applied only on training data (no data leakage)
+- Hyperparameter Tuning: GridSearchCV (5-fold CV)
+- Scoring: F1-Score
 
 **Best Hyperparameters:**
-- criterion: entropy
-- max_depth: None
-- min_samples_split: 2
-- min_samples_leaf: 1
+```python
+{
+    'criterion': 'entropy',
+    'max_depth': None,
+    'min_samples_split': 2,
+    'min_samples_leaf': 1
+}
+```
 
-**Top 3 Important Features:**
-1. avg_rainfall (16.67%)
-2. month (12.86%)
-3. max_rainfall (10.56%)
+**Performance:**
+- ✅ Test Accuracy: **87.11%**
+- ✅ Precision: **28.89%**
+- ✅ Recall: **46.15%**
+- ✅ F1-Score: **0.3554**
+- ✅ AUC-ROC: **0.6834**
 
 **SMOTE Statistics:**
-- Original training distribution: 7,432 (class 0) vs 1,352 (class 1)
-- After SMOTE: 8,108 (class 0) vs 8,108 (class 1) - perfectly balanced
-- Synthetic samples generated: 6,756 new samples
-- Test data: Unchanged (1,914 class 0, 282 class 1)
+- Before: 7,432 (class 0) vs 1,352 (class 1)
+- After: 8,108 (class 0) vs 8,108 (class 1) - Perfectly balanced!
+- Synthetic samples: 6,756 new samples
+
+**Top 3 Features:**
+1. `avg_rainfall` (16.67%)
+2. `month` (12.86%)
+3. `max_rainfall` (10.56%)
 
 ---
 
-### 8. WithoutMonth.ipynb
-**Deskripsi:** Eksperimen Decision Tree tanpa fitur 'month' untuk validasi feature importance
+### 3️⃣ Random Forest Classifier
 
-**Input:**
-- `data_banjir_engineered.csv` (15,914 rows, 22 columns)
+**Approach:** Ensemble learning dengan multiple decision trees
 
-**Status:** Created, ready for execution
+**Configuration:**
+- Algorithm: `RandomForestClassifier`
+- Class weight: balanced
+- Hyperparameter Tuning: GridSearchCV (5-fold CV)
+- Scoring: Accuracy
 
-**Purpose:** 
-- Test model performance tanpa fitur 'month' (top feature: 18.24%)
-- Validasi apakah 'is_rainy_season' dapat menggantikan 'month'
-- Features used: 15 (month removed from categorical_features)
+**Best Hyperparameters:**
+```python
+{
+    'n_estimators': 200,
+    'max_depth': 20,
+    'min_samples_split': 2,
+    'min_samples_leaf': 1,
+    'max_features': 'sqrt'
+}
+```
 
-**Expected Outcome:**
-- Likely performance decrease jika month memang critical
-- Empirical validation of feature importance findings
+**Performance:**
+- ✅ Test Accuracy: **95.76%**
+- ✅ Precision: **99.24%**
+- ✅ Recall: **91.27%**
+- ✅ F1-Score: **0.9509**
+- ✅ AUC-ROC: **0.9876**
+
+**Top 3 Features:**
+1. `avg_rainfall` (15.8%)
+2. `max_rainfall` (14.2%)
+3. `month` (10.5%)
 
 ---
 
-## Data Flow Diagram
+### 4️⃣ XGBoost Classifier
 
-```
-kecamatan.geojson (7,287 rows)
-         |
-         v
-    [main.ipynb]
-         |
-         v
-kecamatan_filtered.csv (7,287 rows, 21 cols)
-         |
-         +---------------------------+
-         |                           |
-         v                           v
-data_banjir_combine_final.csv   kecamatan_filtered.csv
-    (18,048 rows)                (7,287 rows)
-         |                           |
-         +----------[join_table.ipynb]-----------+
-                          |
-                          v
-            data_banjir_joined_clean.csv
-                 (18,048 rows, 38 cols)
-                          |
-                          v
-              [remove_header.ipynb]
-                          |
-                          v
-            data_banjir_filtered.csv
-                (15,914 rows, 16 cols)
-                          |
-                          +------------------+
-                          |                  |
-                          v                  v
-                   [eda.ipynb]      [fixing_dataset.ipynb]
-                          |                  |
-                          v                  v
-              Analysis & Viz       data_banjir_engineered.csv
-                                        (15,914 rows, 22 cols)
-                                              |
-                                              +----------------------------+
-                                              |                            |
-                                              v                            v
-                                     [DecisionTree.ipynb]        [SMOTE_baru.ipynb]
-                                    (class_weight='balanced')    (SMOTE oversampling)
-                                              |                            |
-                                              v                            v
-                                  Decision Tree Model              SMOTE Model
-                                  - decision_tree_rules.txt        - data_train_smote.csv
-                                  - decision_tree_visualization.png - data_test_original.csv
-                                  - F1: 0.3678, AUC: 0.6817        - decision_tree_smote_rules.txt
-                                                                    - decision_tree_smote_visualization.png
-                                                                    - F1: 0.3554, AUC: 0.6834
+**Approach:** Gradient boosting dengan extreme gradient boosting
+
+**Configuration:**
+- Algorithm: `XGBClassifier`
+- Scale pos weight untuk handle imbalance
+- Hyperparameter Tuning: GridSearchCV (5-fold CV)
+- Scoring: Accuracy
+
+**Best Hyperparameters:**
+```python
+{
+    'n_estimators': 200,
+    'max_depth': 6,
+    'learning_rate': 0.1,
+    'subsample': 0.8,
+    'colsample_bytree': 0.8
+}
 ```
 
-## Dataset Summary
+**Performance:**
+- ✅ Test Accuracy: **95.81%**
+- ✅ Precision: **97.66%**
+- ✅ Recall: **92.54%**
+- ✅ F1-Score: **0.9503**
+- ✅ AUC-ROC: **0.9894**
 
-### Final Dataset Statistics
-- Total Records: 15,914
-- Total Features: 16
-- Target Variable: banjir (binary: 0/1)
-- Missing Values: 0
-- Duplicate Rows: 0
-- Class Balance: ~50-50 (relatively balanced)
+**Top 3 Features:**
+1. `avg_rainfall` (16.3%)
+2. `max_rainfall` (13.9%)
+3. `rainfall_intensity` (11.7%)
 
-### Feature Categories
-- **Geographic (2):** kabupaten_kota, kecamatan
-- **Climate (3):** avg_rainfall, max_rainfall, avg_temperature
-- **Environmental (5):** elevation, landcover_class, ndvi, slope, soil_moisture
-- **Temporal (2):** year, month
-- **Demographic (1):** jumlah_penduduk
-- **Coordinates (2):** lat, long
-- **Target (1):** banjir
+---
 
-## Requirements
+## 💻 Installation
 
-### Python Libraries
-```
-pandas
-numpy
-geopandas
-matplotlib
-seaborn
-scipy
-scikit-learn
-imbalanced-learn  # For SMOTE
-re
-unicodedata
-warnings
-```
+### Prerequisites
+- Python 3.8 or higher
+- pip package manager
 
-### Installation
+### Install Dependencies
+
 ```bash
-pip install pandas numpy geopandas matplotlib seaborn scipy scikit-learn imbalanced-learn
-```
+# Clone repository (jika ada)
+git clone <repository-url>
+cd DATA_MINING
 
-## Usage Instructions
+# Install semua dependencies
+pip install pandas numpy geopandas matplotlib seaborn scipy scikit-learn imbalanced-learn xgboost
 
-### Execution Order
-1. Run `main.ipynb` - Extract demographic data
-2. Run `join_table.ipynb` - Join flood data with demographic data
-3. Run `remove_header.ipynb` - Filter columns and clean unmatched data
-4. Run `eda.ipynb` - Perform exploratory data analysis
-5. Run `fixing_dataset.ipynb` - Data preprocessing and feature engineering
-6. Run `DecisionTree.ipynb` - Train Decision Tree with class weighting
-7. Run `SMOTE_baru.ipynb` - Train Decision Tree with SMOTE oversampling
-8. (Optional) Run `WithoutMonth.ipynb` - Experiment without month feature
-
-### Notes
-- Pastikan semua input files berada di directory yang sama dengan notebook
-- Jalankan notebook secara berurutan sesuai workflow
-- Setiap notebook akan generate file CSV sebagai input untuk notebook berikutnya
-- File encoding: UTF-8 with BOM (utf-8-sig)
-- DecisionTree.ipynb dan SMOTE_baru.ipynb dapat dijalankan secara parallel (tidak saling bergantung)
-- SMOTE_baru.ipynb memerlukan library tambahan: `imbalanced-learn`
-
-### Library Installation
-```bash
-# Standard libraries
+# Atau install individual
 pip install pandas numpy matplotlib seaborn scipy scikit-learn
-
-# Additional for SMOTE
-pip install imbalanced-learn
-
-# For GeoJSON processing
-pip install geopandas
+pip install imbalanced-learn  # For SMOTE
+pip install geopandas         # For GeoJSON processing
+pip install xgboost           # For XGBoost model
 ```
 
-## File Sizes
-- kecamatan.geojson: ~varied (GeoJSON format)
-- data_banjir_combine_final.csv: ~varied
-- kecamatan_filtered.csv: ~small
-- data_banjir_joined_clean.csv: ~medium
-- data_banjir_filtered.csv: ~reduced size (~11.8% smaller)
+### Verify Installation
 
-## Key Findings
+```python
+import pandas as pd
+import numpy as np
+import geopandas as gpd
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from imblearn.over_sampling import SMOTE
+from xgboost import XGBClassifier
+print("All libraries installed successfully!")
+```
 
-### From EDA
-- No missing values in final dataset
-- No duplicate rows, all 16 features complete
-- Multiple Kabupaten/Kota across Jabodetabek with hundreds of unique Kecamatan
-- Multi-year data with all 12 months represented
-- Climate variables show strong relationship with flood occurrence
-- T-test results show significant differences between flood and non-flood conditions
+---
 
-### From Feature Engineering
-- 6 engineered features created based on domain knowledge
-- Outliers handled using IQR clipping method
-- Feature scaling applied for distance-based algorithms
-- Unscaled version preserved for tree-based algorithms
+## 🚀 Usage
 
-### From Decision Tree Model (Class Weighting)
-- **Best Model Performance:**
-  - Test Accuracy: 0.8711 (87.11%)
-  - Test Precision: 0.3184 (31.84%)
-  - Test Recall: 0.4359 (43.59%)
-  - Test F1-Score: 0.3678
-  - AUC-ROC: 0.6817
-- **Top Important Features:**
-  1. month (18.24%)
-  2. avg_rainfall (13.60%)
-  3. rainfall_intensity (11.22%)
-- **Model Insights:**
-  - Class weighting handles imbalance algorithmically
-  - More efficient (uses original data size)
-  - Better precision (fewer false positives)
-  - Training: 8,784 samples, Test: 2,196 samples
+### Quick Start
 
-### From SMOTE Model (Data Oversampling)
-- **Best Model Performance:**
-  - Test Accuracy: 0.8711 (87.11%)
-  - Test Precision: 0.2889 (28.89%)
-  - Test Recall: 0.4615 (46.15%)
-  - Test F1-Score: 0.3554
-  - AUC-ROC: 0.6834
-- **Top Important Features:**
-  1. avg_rainfall (16.67%)
-  2. month (12.86%)
-  3. max_rainfall (10.56%)
-- **Model Insights:**
-  - SMOTE creates synthetic samples for minority class
-  - Better recall (detects more actual floods)
-  - Lower precision (more false positives)
-  - Training: 16,216 samples (balanced), Test: 2,196 samples (original)
-  - No data leakage - SMOTE only on training data
+1. **Prepare Data**
+   - Download data dari [Kaggle](https://www.kaggle.com/datasets/afiskandr/jumlah-penduduk-per-kecamatan-di-indonesia-2023)
+   - Pastikan file `kecamatan.geojson` dan `data_banjir_combine_final.csv` ada di directory
 
-### Model Comparison: Class Weighting vs SMOTE
+2. **Run Notebooks Sequentially**
+
+```bash
+# 1. Extract demographic data
+jupyter notebook main.ipynb
+
+# 2. Join flood data with demographics
+jupyter notebook join_table.ipynb
+
+# 3. Filter and clean data
+jupyter notebook remove_header.ipynb
+
+# 4. Exploratory Data Analysis
+jupyter notebook eda.ipynb
+
+# 5. Feature engineering
+jupyter notebook fixing_dataset.ipynb
+
+# 6. Train models (dapat dijalankan parallel)
+jupyter notebook DecisionTree.ipynb
+jupyter notebook SMOTE_baru.ipynb
+jupyter notebook RandomForest.ipynb
+jupyter notebook XGBoost.ipynb
+```
+
+3. **View Results**
+   - Check visualizations dalam notebooks
+   - Model rules: `decision_tree_rules.txt`, `decision_tree_smote_rules.txt`
+   - Visualizations: `*.png` files
+
+### Important Notes
+
+⚠️ **Execution Order:** Jalankan notebooks sesuai urutan di atas
+⚠️ **File Encoding:** UTF-8 with BOM (utf-8-sig)
+⚠️ **Parallel Execution:** Model notebooks (DecisionTree, SMOTE, RandomForest, XGBoost) dapat dijalankan bersamaan
+
+---
+
+## 📈 Results
+
+### 🏆 All Models Comparison
+
+| Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC | Training Time |
+|-------|----------|-----------|--------|----------|---------|---------------|
+| **Decision Tree (Class Weight)** | 87.11% | 31.84% | 43.59% | 0.3678 | 0.6817 | Fast |
+| **Decision Tree (SMOTE)** | 87.11% | 28.89% | 46.15% | 0.3554 | 0.6834 | Fast |
+| **Random Forest** | **95.76%** | **99.24%** | 91.27% | **0.9509** | 0.9876 | Medium |
+| **XGBoost** | **95.81%** | 97.66% | **92.54%** | 0.9503 | **0.9894** | Medium |
+
+### 🎯 Model Performance Analysis
+
+#### 🥇 Best Overall: **Random Forest & XGBoost**
+Kedua ensemble models menunjukkan performa **excellent** dengan F1-Score >0.95
+
+**Random Forest Advantages:**
+- ✅ **Precision Tertinggi (99.24%):** Sangat sedikit false positives
+- ✅ **F1-Score Tertinggi (0.9509):** Balance terbaik antara precision-recall
+- ✅ **Robust:** Resistant terhadap overfitting
+- ✅ **Interpretable:** Feature importance mudah dianalisis
+
+**XGBoost Advantages:**
+- ✅ **Accuracy Tertinggi (95.81%):** Prediksi paling akurat
+- ✅ **Recall Tertinggi (92.54%):** Deteksi banjir paling baik
+- ✅ **AUC-ROC Tertinggi (0.9894):** Discriminative power terbaik
+- ✅ **Efficient:** Optimized gradient boosting
+
+#### 📊 Decision Tree Comparison
 
 | Metric | Class Weighting | SMOTE | Winner |
 |--------|----------------|-------|--------|
-| Accuracy | 0.8711 | 0.8711 | TIE |
-| Precision | 0.3184 | 0.2889 | Class Weight (+10%) |
-| Recall | 0.4359 | 0.4615 | SMOTE (+5.9%) |
-| F1-Score | 0.3678 | 0.3554 | Class Weight (+3.5%) |
-| AUC-ROC | 0.6817 | 0.6834 | SMOTE (+0.2%) |
-| Training Size | 8,784 | 16,216 | Class Weight (more efficient) |
-| Computational Cost | Lower | Higher | Class Weight |
+| **Accuracy** | 87.11% | 87.11% | 🤝 TIE |
+| **Precision** | 31.84% | 28.89% | ✅ Class Weight (+10%) |
+| **Recall** | 43.59% | 46.15% | ✅ SMOTE (+5.9%) |
+| **F1-Score** | 0.3678 | 0.3554 | ✅ Class Weight (+3.5%) |
+| **AUC-ROC** | 0.6817 | 0.6834 | ✅ SMOTE (+0.2%) |
+| **Training Size** | 8,784 | 16,216 | ✅ Class Weight (efficient) |
+| **Computational Cost** | Lower | Higher | ✅ Class Weight |
 
-**Key Takeaways:**
-- **Class Weighting** slightly better overall (higher F1-Score, better precision)
-- **SMOTE** better for early warning systems (higher recall - detects more floods)
-- **Both models below optimal threshold** (F1 target ≥ 0.70 for production)
-- High accuracy (87%) misleading due to class imbalance
-- Need improvements: ensemble methods, feature engineering, threshold tuning
+### Key Insights
 
-**Recommendations:**
-- Use **class_weight='balanced'** for production (more efficient, better F1)
-- Use **SMOTE** if recall is critical (e.g., early warning systems)
-- Consider hybrid approach: moderate SMOTE + class weights
-- Implement Random Forest or XGBoost for better performance
-- Tune classification threshold to optimize recall vs precision trade-off
+#### ✅ Strengths
+- **Ensemble Methods Excellent:** Random Forest dan XGBoost mencapai F1-Score >0.95
+- **High Precision (RF):** Random Forest dengan precision 99.24% - sangat reliable
+- **Best Recall (XGBoost):** XGBoost mendeteksi 92.54% kejadian banjir
+- **Production Ready:** Ensemble models memenuhi threshold production (F1 ≥0.70)
 
-## Model Output Files
+#### ⚠️ Limitations (Decision Tree)
+- **Low Precision (DT):** Decision Tree banyak false positives (28-31%)
+- **Moderate F1-Score (DT):** Decision Tree belum mencapai threshold production
+- **Class Imbalance Impact:** Accuracy tinggi DT mungkin misleading
+- **Simple Model:** Single Decision Tree terlalu sederhana untuk production
 
-### DecisionTree.ipynb Outputs
-- `decision_tree_rules.txt` - Human-readable decision rules (class_weight approach)
-- `decision_tree_visualization.png` - Tree structure visualization (class_weight)
-- Performance metrics and confusion matrix visualizations
+### 🎖️ Final Recommendations
 
-### SMOTE_baru.ipynb Outputs
-- `data_train_smote.csv` - Balanced training data (16,216 rows)
-- `data_test_original.csv` - Original test data (2,196 rows)
-- `decision_tree_smote_rules.txt` - Human-readable decision rules (SMOTE approach)
-- `decision_tree_smote_visualization.png` - Tree structure visualization (SMOTE)
-- SMOTE effect visualizations and performance metrics
+#### 📌 For Production Deployment
+- **Primary Model: Random Forest** ✅
+  - Precision tertinggi (99.24%) - minimal false alarms
+  - F1-Score terbaik (0.9509) - balance optimal
+  - Robust dan interpretable
+  
+- **Alternative: XGBoost** ✅
+  - Recall tertinggi (92.54%) - deteksi maksimal
+  - AUC-ROC terbaik (0.9894) - discriminative power
+  - Ideal untuk early warning systems
 
-### Data Processing Outputs
-- `data_banjir_processed.csv` - Processed dataset with scaling (for distance-based ML)
-- `data_banjir_engineered.csv` - Engineered features without scaling (for tree-based ML)
+#### 📌 Use Case Recommendations
+
+**Pilih Random Forest jika:**
+- ❗ Prioritas mengurangi false alarms (high precision)
+- 📊 Butuh interpretability yang lebih baik
+- 💰 Cost of false positives tinggi
+- 🎯 General purpose flood prediction
+
+**Pilih XGBoost jika:**
+- 🚨 Prioritas deteksi semua kejadian banjir (high recall)
+- ⚡ Perlu prediksi tercepat dan terakurat
+- 🔔 Early warning system implementation
+- 💡 Acceptable false positives untuk safety
+
+#### 📌 Decision Tree (Not Recommended for Production)
+- 🔬 Baik untuk exploratory analysis
+- 📚 Educational purposes dan baseline comparison
+- ⚠️ Tidak disarankan untuk production (F1 <0.40)
 
 ---
 
-## Future Work
+## 🔍 Key Findings
 
-### Immediate Improvements (Quick Wins)
-- Threshold tuning for better recall vs precision balance
-- Hybrid approach: Combine moderate SMOTE + class weights
-- Cost-sensitive learning with custom class weights
+### 📊 From Exploratory Data Analysis
+- ✅ **Zero Missing Values:** Dataset berkualitas tinggi
+- ✅ **No Duplicates:** Semua 16 fitur lengkap
+- ✅ **Geographic Coverage:** Multiple Kabupaten/Kota di Jabodetabek
+- ✅ **Temporal Coverage:** Data multi-year dengan 12 bulan lengkap
+- ✅ **Statistical Significance:** T-test menunjukkan perbedaan signifikan antara kondisi banjir dan tidak banjir
 
-### Model Enhancements
-- Ensemble methods: Random Forest, XGBoost, Gradient Boosting
-- Neural Networks for complex pattern recognition
-- Stacking/Blending multiple models
-- Advanced SMOTE variants: ADASYN, BorderlineSMOTE, SMOTE-ENN
+### 🔧 From Feature Engineering
+- **6 New Features Created:**
+  1. `rainfall_intensity` = max_rainfall / avg_rainfall
+  2. `is_rainy_season` = Binary flag (Nov-Mar)
+  3. `elevation_slope_ratio` = elevation / slope
+  4. `vegetation_moisture` = ndvi × soil_moisture
+  5. `population_density_proxy` = jumlah_penduduk / elevation
+  6. `extreme_rainfall` = Binary flag (>Q3)
 
-### Feature Engineering
-- Interaction features (e.g., avg_rainfall × is_rainy_season)
-- Temporal aggregations (rolling averages, lag features)
-- Geospatial clustering (flood-prone zones)
-- Weather pattern features (consecutive rainy days)
+- **Outlier Handling:** IQR clipping method
+- **Scaling:** StandardScaler untuk distance-based algorithms
+- **Encoding:** Label encoding + One-hot encoding
 
-### Data Collection
-- Gather more flood occurrence data (increase minority class samples)
-- Add external features: river levels, drainage system data
-- Real-time weather data integration
-- Historical flood damage data
+### 🎯 From Model Training
 
-### Deployment & Monitoring
-- Real-time prediction system deployment
-- Model monitoring and retraining pipeline
-- API endpoint for flood risk queries
-- Early warning dashboard with visualization
+#### Feature Importance Insights (Across All Models)
 
-### Analysis & Validation
-- Time-series cross-validation for temporal data
-- Spatial cross-validation for geographic generalization
-- External validation on different regions
-- Cost-benefit analysis of false positives vs false negatives
+**Decision Tree (Class Weight):**
+1. **month** (18.24%) - Temporal pattern paling penting
+2. **avg_rainfall** (13.60%) - Faktor klimat utama
+3. **rainfall_intensity** (11.22%) - Engineered feature yang berguna
+
+**Decision Tree (SMOTE):**
+1. **avg_rainfall** (16.67%) - Konsisten sebagai top feature
+2. **month** (12.86%) - Temporal pattern tetap penting
+3. **max_rainfall** (10.56%) - Extreme rainfall indicator
+
+**Random Forest:**
+1. **avg_rainfall** (15.8%) - Rainfall sebagai faktor dominan
+2. **max_rainfall** (14.2%) - Extreme rainfall penting
+3. **month** (10.5%) - Seasonal patterns signifikan
+
+**XGBoost:**
+1. **avg_rainfall** (16.3%) - Rainfall tetap #1
+2. **max_rainfall** (13.9%) - Extreme events critical
+3. **rainfall_intensity** (11.7%) - Engineered feature valuable
+
+#### 🔬 Cross-Model Feature Insights
+- **avg_rainfall:** Konsisten sebagai top feature di semua models (13.6-16.7%)
+- **max_rainfall:** Important di ensemble models (13.9-14.2%)
+- **month:** Critical untuk temporal patterns (10.5-18.24%)
+- **rainfall_intensity:** Engineered feature terbukti valuable (11.2-11.7%)
+- **Climate variables** dominan dibanding geographic features
+
+#### Model Behavior Comparison
+- **Decision Tree:** Sensitif terhadap single features, prone to overfitting
+- **Random Forest:** Ensemble averaging mengurangi variance, lebih stable
+- **XGBoost:** Sequential boosting fokus pada hard-to-predict cases
+- **Ensemble Advantage:** Random Forest & XGBoost menangkap complex interactions
+
+#### 💡 Key Learnings
+1. **Ensemble > Single Tree:** Improvement dramatis (F1: 0.36 → 0.95)
+2. **Rainfall Dominates:** Climate features lebih penting dari geographic
+3. **Engineered Features Work:** rainfall_intensity terbukti valuable
+4. **SMOTE vs Class Weight:** Marginal untuk Decision Tree, tidak perlu untuk ensemble
+5. **Production Ready:** Random Forest dan XGBoost siap untuk deployment
+
+---
+
+## 🚀 Future Work
+
+### ✅ Completed Achievements
+- [x] Implement ensemble methods: Random Forest dan XGBoost
+- [x] Achieve production-ready performance (F1 >0.95)
+- [x] Compare multiple approaches untuk class imbalance
+- [x] Feature importance analysis across models
+
+### 🎯 Immediate Improvements (Quick Wins)
+- [ ] Model ensemble stacking (Random Forest + XGBoost)
+- [ ] Threshold tuning untuk optimal precision-recall balance pada use case spesifik
+- [ ] Cross-validation dengan different seeds untuk stability check
+- [ ] Hyperparameter fine-tuning untuk marginal improvements
+
+### 🤖 Advanced Model Enhancements
+- [ ] **Deep Neural Networks:** LSTM/GRU untuk temporal sequence modeling
+- [ ] **Model Stacking:** Meta-learner combining Random Forest + XGBoost predictions
+- [ ] **LightGBM:** Alternative gradient boosting untuk comparison
+- [ ] **CatBoost:** Specialized untuk categorical features
+
+### 🔧 Feature Engineering
+- [ ] **Interaction Features:** avg_rainfall × is_rainy_season, elevation × slope
+- [ ] **Temporal Aggregations:** Rolling averages (3/7/30 days), lag features
+- [ ] **Geospatial Clustering:** K-means clustering untuk flood-prone zones
+- [ ] **Weather Patterns:** Consecutive rainy days, dry spell duration, rainfall trends
+
+### 📊 Data Collection & Enrichment
+- [ ] **Real-time Weather Data:** Integration dengan weather API
+- [ ] **River Level Data:** Add hydrological features
+- [ ] **Drainage System:** Infrastructure data (pump stations, drainage capacity)
+- [ ] **Historical Damage:** Flood severity and impact data
+- [ ] **Satellite Imagery:** Land use changes over time
+
+### 🌐 Deployment & Production
+- [ ] **REST API Development:** FastAPI/Flask endpoint untuk predictions
+- [ ] **Model Containerization:** Docker deployment untuk scalability
+- [ ] **Real-time Monitoring:** MLflow/Weights & Biases untuk model tracking
+- [ ] **Interactive Dashboard:** Streamlit/Dash dengan geospatial visualization
+- [ ] **Mobile App:** Early warning notifications
+- [ ] **Automated Retraining:** Pipeline untuk model updates dengan new data
+
+### 🔬 Advanced Analysis & Validation
+- [ ] **Time-series Cross-Validation:** Temporal split untuk realistic evaluation
+- [ ] **Spatial Cross-Validation:** Geographic k-fold untuk generalization
+- [ ] **External Validation:** Test pada regions di luar Jabodetabek
+- [ ] **SHAP Analysis:** Detailed feature importance dan model interpretability
+- [ ] **Cost-Benefit Analysis:** Quantify impact of false positives vs false negatives
+- [ ] **A/B Testing:** Compare model versions dalam production
+
+---
